@@ -1,6 +1,26 @@
+"""
 seed: 42
-time_col: t_ms
-resample_hz: 10          # 리샘플 안 하면 null
 
+
+# I/O
+time_col: t_ms
+resample_hz: 10 # set null/0 to skip resampling
+
+
+# Columns (change to your CSV headers)
 feature_cols: [uwb_x, uwb_y, flp_x, flp_y, speed, accel, anchor_count, fppl, cir_peak]
-target_cols:  [target_dx, target_dy]   # 만약 range_error 1개만 쓴다면 [range_error]
+# For 2D error correction
+target_cols: [target_dx, target_dy]
+# For 1D range-error correction, comment the line above and use:
+# target_cols: [range_error]
+
+
+# Model (Gaussian Process)
+model:
+kernel: RBF # RBF | Matern
+ard: true # per-feature length-scales
+length_scale: 1.0
+noise: 1e-3 # WhiteKernel noise
+alpha: 1e-6 # numerical nugget
+matern_nu: 1.5 # only if kernel=Matern
+"""
