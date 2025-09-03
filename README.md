@@ -1,1 +1,1 @@
-# GPR로 위치/거리 오차를 예측해 **UWB/FLP/YOLO** 데이터를 보정하는 파이프라인의 최소 구현
+테스트용 가짜 데이터: `python scripts/make_fake_data.py` → data/train.csv, data/eval.csv 생성
