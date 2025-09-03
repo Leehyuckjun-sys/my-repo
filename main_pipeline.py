@@ -9,9 +9,7 @@ from src.gpr.data import load_csv, sync_and_resample, select_xy
 from src.gpr.model import GPRModel, GPRConfig
 
 
-def _load_cfg(path: str):
-    with open(path, "r", encoding="utf-8") as f:
-        return yaml.safe_load(f)
+def _load_cfg(path: str): return yaml.safe_load(Path(path).read_text(encoding="utf-8"))
 
 
 def cmd_train(args):
