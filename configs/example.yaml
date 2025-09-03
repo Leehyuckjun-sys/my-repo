@@ -1,14 +1,1 @@
-seed: 42
-time_col: t_ms
-resample_hz: 10        # 리샘플 안 하려면 null
 
-feature_cols: [uwb_x, uwb_y, flp_x, flp_y, speed, accel, anchor_count, fppl, cir_peak]
-target_cols:  [target_dx, target_dy]   # 타깃이 range_error면 [range_error]
-
-model:
-  kernel: RBF          # RBF | Matern
-  ard: true            # 특징별 길이척도
-  length_scale: 1.0
-  noise: 1e-3
-  alpha: 1e-6
-  matern_nu: 1.5
