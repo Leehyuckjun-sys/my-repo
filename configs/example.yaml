@@ -1,0 +1,6 @@
+seed: 42
+time_col: t_ms
+resample_hz: 10          # 리샘플 안 하면 null
+
+feature_cols: [uwb_x, uwb_y, flp_x, flp_y, speed, accel, anchor_count, fppl, cir_peak]
+target_cols:  [target_dx, target_dy]   # 만약 range_error 1개만 쓴다면 [range_error]
