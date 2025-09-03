@@ -1,4 +1,91 @@
 from __future__ import annotations
+import argparse
+from pathlib import Path
+import numpy as np
+import pandas as pd
+import yaml
+
+
+from src.gpr.data import load_csv, sync_and_resample, select_xy
+from src.gpr.model import GPRModel, GPRConfig
+
+
+
+
+def _load_cfg(path: str):
+with open(path, "r", encoding="utf-8") as f:
+return yaml.safe_load(f)
+
+
+
+def cmd_train(args):
+cfg = _load_cfg(args.config)
+df = load_csv(args.train)
+df = sync_and_resample(df, cfg.get("time_col", "t_ms"), cfg.get("resample_hz"))
+
+
+X, y = select_xy(df, cfg["feature_cols"], cfg["target_cols"])
+n_targets = y.shape[1] if y.ndim > 1 else 1
+gcfg = GPRConfig(
+kernel=cfg.get("model", {}).get("kernel", "RBF"),
+length_scale=float(cfg.get("model", {}).get("length_scale", 1.0)),
+ard=bool(cfg.get("model", {}).get("ard", True)),
+noise=float(cfg.get("model", {}).get("noise", 1e-3)),
+alpha=float(cfg.get("model", {}).get("alpha", 1e-6)),
+matern_nu=float(cfg.get("model", {}).get("matern_nu", 1.5)),
+random_state=int(cfg.get("seed", 42)),
+)
+
+
+model = GPRModel(n_features=X.shape[1], n_targets=n_targets, cfg=gcfg)
+model.fit(X, y, cfg["feature_cols"], cfg["target_cols"])
+
+
+out_dir = Path(args.out)
+out_dir.mkdir(parents=True, exist_ok=True)
+model_path = out_dir / "model.joblib"
+model.save(str(model_path))
+print(f"[train] saved: {model_path}")
+
+
+
+def cmd_infer(args):
+model = GPRModel.load(args.model)
+df = load_csv(args.input)
+
+
+cfg = _load_cfg(args.config) if args.config else {}
+time_col = cfg.get("time_col", "t_ms")
+if cfg.get("resample_hz"):
+df = sync_and_resample(df, time_col, cfg.get("resample_hz"))
+
+
+feat_cols = cfg.get("feature_cols", model.feature_names)
+if feat_cols is None:
+raise RuntimeError("feature_cols not provided and not stored in model. Provide --config.")
+
+
+X, _ = select_xy(df, feat_cols, None)
+mu, std = model.predict(X, return_std=True)
+
+
+out = pd.DataFrame({time_col: df[time_col] if time_col in df.columns else np.arange(len(df))})
+if mu.ndim == 1 or mu.shape[1] == 1:
+out["pred"] = mu.ravel(); out["std"] = std.ravel()
+else:
+out[["pred_dx", "pred_dy"]] = mu
+out[["std_dx", "std_dy"]] = std
+
+
+Path(args.out).parent.mkdir(parents=True, exist_ok=True)
+out.to_csv(args.out, index=False)
+print(f"[infer] wrote: {args.out} shape={out.shape}")def cmd_eval(args):
+from sklearn.metrics import mean_squared_error, mean_absolute_error
+
+
+truth = load_csv(args.truth)
+pred = load_csv(args.pred)
+time_keys = [c for c in ["t_ms", "time", "timestamp"] if c in truth.columns and c in pred.columns]
 
 
 if time_keys:
@@ -26,7 +113,6 @@ y = y[:, :yhat.shape[1]]
 rmse = float(np.sqrt(mean_squared_error(y, yhat)))
 mae = float(mean_absolute_error(y, yhat))
 print(f"RMSE={rmse:.4f} MAE={mae:.4f} N={len(df)}")
-
 
 
 
